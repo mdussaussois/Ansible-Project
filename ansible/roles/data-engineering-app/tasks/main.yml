@@ -1,0 +1,94 @@
+---
+#- name: Upgrade all packages
+#  yum:
+#    name: '*'
+#    state: latest
+
+- name: Install yum-utils
+  yum:
+    name: yum-utils
+    state: present
+
+- name: Install the 'Development tools' package group
+  yum:
+    name: "@Development tools"
+    state: present
+
+- name: Install epel-release
+  package:
+    name: epel-release
+    state: present
+
+- name: Install python3 repository
+  yum:
+    name: https://centos7.iuscommunity.org/ius-release.rpm
+    state: present
+
+- name: Install python3.6 packages.
+  yum:
+    update_cache: True
+    name:
+      - python36u
+      - python36u-libs
+      - python36u-devel
+      - python36u-pip
+      - python36u-setuptools
+
+- name: Install gcc compilator since it is required to install some of pip dependencies.
+  yum:
+    name: gcc
+
+- name: Upgrade pip.
+  command: pip3.6 install --upgrade pip
+
+- name: Install setuptools
+  yum:
+    name: python-setuptools
+    update_cache: yes
+    state: latest
+
+
+- name: Make /app directory
+  file:
+    path: /app
+    state: directory
+
+
+- name: Copy local app to the target and unzip it
+  unarchive:
+    src: data-engineering.tar
+    dest: /app/
+
+- name: Install python requirements
+  pip:
+    requirements: /app/data-engineering/requirements.txt
+    executable: /bin/pip3.6
+#  command: pip3 install -r /data-engineering/requirements.txt
+
+- name: Copy local service config file to the target
+  copy:
+    src: app.service
+    dest: /etc/systemd/system/
+
+#- name: set Environment variables
+#  environment:
+#    ELASTICSEARCH_URL: "http://192.168.201.14:9200"
+#    MONGODB_URI: "mongodb://192.168.201.13:27017"
+
+#- name: set ELASTICSEARCH_URL
+#  command: export ELASTICSEARCH_URL="http://192.168.201.14:9200"
+#
+#- name: set MONGODB_URI
+#  command: export MONGODB_URI="mongodb://192.168.201.13:27017"
+
+- name: Reload services
+  command: systemctl daemon-reload
+
+- name: Start app.service
+  service:
+    name: app.service
+    enabled: yes
+    state: started
+
+#- name: Download the dumped data from https://perso.esiee.fr/~prolonga/data/tripadvisor_dump.zip
+#  command: cd app && mkdir data && mkdir data/dump && cd data/dump && curl -o tripadvisor_dump.zip https://perso.esiee.fr/~prolonga/data/tripadvisor_dump.zip && unzip tripadvisor_dump.zip && rm tripadvisor_dump.zip && cd ../..
